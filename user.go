@@ -374,6 +374,10 @@ func (user *User) GetSpaceRoom() id.RoomID {
 }
 
 func (user *User) GetDMSpaceRoom() id.RoomID {
+	if !user.bridge.Config.Bridge.EnableDMBridging {
+		user.log.Debug().Msg("DM bridging is disabled, skipping DM space creation")
+		return ""
+	}
 	return user.getSpaceRoom(&user.DMSpaceRoom, "Direct Messages", "Your Discord direct messages", user.GetSpaceRoom())
 }
 
@@ -875,6 +879,10 @@ func (user *User) handleRelationshipChange(userID, nickname string) {
 }
 
 func (user *User) handlePrivateChannel(portal *Portal, meta *discordgo.Channel, timestamp time.Time, create, isInSpace bool) {
+	if !user.bridge.Config.Bridge.EnableDMBridging {
+		user.log.Debug().Str("channel_id", meta.ID).Msg("DM bridging is disabled, skipping private channel handling")
+		return
+	}
 	if create && portal.MXID == "" {
 		err := portal.CreateMatrixRoom(user, meta)
 		if err != nil {

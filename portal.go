@@ -389,8 +389,8 @@ func (portal *Portal) GetEncryptionEventContent() (evt *event.EncryptionEventCon
 }
 
 func (portal *Portal) CreateMatrixRoom(user *User, channel *discordgo.Channel) error {
-	if portal.IsPrivateChat() && !portal.bridge.Config.Bridge.EnableDMBridging {
-		portal.log.Debug().Msg("DM bridging is disabled, skipping Matrix room creation for private chat")
+	if (portal.IsPrivateChat() || portal.Type == discordgo.ChannelTypeGroupDM) && !portal.bridge.Config.Bridge.EnableDMBridging {
+		portal.log.Debug().Msg("DM bridging is disabled, skipping Matrix room creation for private chat or group DM")
 		return nil
 	}
 	portal.roomCreateLock.Lock()

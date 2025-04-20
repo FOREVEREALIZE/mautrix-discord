@@ -6,16 +6,30 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func (user *User) channelIsBridgeable(channel *discordgo.Channel) bool {
+func channelIsBridgeable(channel *discordgo.Channel, enableDMBridging bool) bool {
 	switch channel.Type {
 	case discordgo.ChannelTypeGuildText, discordgo.ChannelTypeGuildNews:
-		// allowed
-	case discordgo.ChannelTypeDM, discordgo.ChannelTypeGroupDM:
-		// DMs are always bridgeable, no need for permission checks
+		// Always allowed
 		return true
+	case discordgo.ChannelTypeDM, discordgo.ChannelTypeGroupDM:
+		// DMs are only bridgeable if DM bridging is enabled
+		return enableDMBridging
 	default:
-		// everything else is not allowed
+		// Everything else is not allowed
 		return false
+	}
+}
+
+func (user *User) channelIsBridgeable(channel *discordgo.Channel) bool {
+	// First check if the channel type is bridgeable based on the EnableDMBridging setting
+	if !channelIsBridgeable(channel, user.bridge.Config.Bridge.EnableDMBridging) {
+		return false
+	}
+
+	// For guild channels, we need to check permissions
+	if channel.GuildID == "" {
+		// Non-guild channels that passed the first check are bridgeable
+		return true
 	}
 
 	log := user.log.With().Str("guild_id", channel.GuildID).Str("channel_id", channel.ID).Logger()

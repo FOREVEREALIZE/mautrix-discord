@@ -880,6 +880,10 @@ func (user *User) handleRelationshipChange(userID, nickname string) {
 
 func (user *User) handlePrivateChannel(portal *Portal, meta *discordgo.Channel, timestamp time.Time, create, isInSpace bool) {
 	if !user.bridge.Config.Bridge.EnableDMBridging {
+		if meta.Type == discordgo.ChannelTypeGroupDM {
+			user.log.Debug().Str("channel_id", meta.ID).Msg("DM bridging is disabled, skipping group DM handling")
+			return
+		}
 		user.log.Debug().Str("channel_id", meta.ID).Msg("DM bridging is disabled, skipping private channel handling")
 		return
 	}
@@ -1233,6 +1237,18 @@ func (user *User) pushPortalMessage(msg interface{}, typeName, channelID, guildI
 			Msg("Dropping event in unknown channel")
 		return
 	}
+
+	// Skip DM and GroupDM messages if DM bridging is disabled
+	if (portal.Type == discordgo.ChannelTypeDM || portal.Type == discordgo.ChannelTypeGroupDM) &&
+		!user.bridge.Config.Bridge.EnableDMBridging {
+		user.log.Debug().
+			Str("discord_event", typeName).
+			Str("channel_id", channelID).
+			Int("channel_type", int(portal.Type)).
+			Msg("Dropping event in DM channel because DM bridging is disabled")
+		return
+	}
+
 	if mode := user.getGuildBridgingMode(portal.GuildID); mode <= database.GuildBridgeNothing || (portal.MXID == "" && mode <= database.GuildBridgeIfPortalExists) {
 		return
 	}
